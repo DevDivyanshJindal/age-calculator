@@ -3,29 +3,686 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#00ffff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>Age Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <style>
     body {
-      background-color: #000000;
-      min-height: 100vh;
-      margin: 0;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      font-family: 'Inter', sans-serif;
+    }
+    .birthday-animation {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #f00;
+      border-radius: 50%;
+      animation: fall 5s linear infinite;
+    }
+    @keyframes fall {
+      0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(500px) rotate(360deg); opacity: 0; }
+    }
+    .baby-animation {
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0); }
+    }
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 200px;
+      background-color: #1e293b;
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 8px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+    .heart-animation {
+      animation: heartbeat 1.5s ease-in-out infinite;
+    }
+    @keyframes heartbeat {
+      0% { transform: scale(1); }
+      25% { transform: scale(1.1); }
+      50% { transform: scale(1); }
+      75% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .offline-badge {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: #374151;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: none;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .offline-badge i {
+      margin-right: 6px;
     }
   </style>
 </head>
-<body class="flex items-center justify-center min-h-screen text-white">
+<body class="bg-zinc-950 min-h-screen flex items-center justify-center p-4">
   <div id="root"></div>
-  <script type="module" src="/AgeCalculator.jsx"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js');
-      });
+  <div id="offline-badge" class="offline-badge">
+    <i class="fas fa-wifi-slash"></i> Offline Mode
+  </div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function AgeCalculator() {
+      const [day, setDay] = useState('');
+      const [month, setMonth] = useState('');
+      const [year, setYear] = useState('');
+      const [age, setAge] = useState(null);
+      const [daysUntilBirthday, setDaysUntilBirthday] = useState(null);
+      const [nextBirthday, setNextBirthday] = useState(null);
+      const [isBirthdayToday, setIsBirthdayToday] = useState(false);
+      const [isNewborn, setIsNewborn] = useState(false);
+      const [error, setError] = useState(null);
+      const [showConfetti, setShowConfetti] = useState(false);
+      const [showInstructions, setShowInstructions] = useState(true);
+      const [inputsLocked, setInputsLocked] = useState(false);
+      const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+      // Monitor online/offline status
+      useEffect(() => {
+        function handleOnlineStatusChange() {
+          setIsOffline(!navigator.onLine);
+          
+          const offlineBadge = document.getElementById('offline-badge');
+          if (offlineBadge) {
+            offlineBadge.style.display = navigator.onLine ? 'none' : 'flex';
+          }
+        }
+        
+        window.addEventListener('online', handleOnlineStatusChange);
+        window.addEventListener('offline', handleOnlineStatusChange);
+        
+        // Initial check
+        handleOnlineStatusChange();
+        
+        return () => {
+          window.removeEventListener('online', handleOnlineStatusChange);
+          window.removeEventListener('offline', handleOnlineStatusChange);
+        };
+      }, []);
+
+      // Register service worker for PWA
+      useEffect(() => {
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+              .then(registration => {
+                console.log('Service Worker registered with scope:', registration.scope);
+              })
+              .catch(error => {
+                console.log('Service Worker registration failed:', error);
+              });
+          });
+        }
+      }, []);
+
+      // Create confetti effect for birthdays
+      useEffect(() => {
+        if (showConfetti) {
+          const confettiColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+          const container = document.getElementById('confetti-container');
+          
+          // Clear any existing confetti
+          if (container) {
+            container.innerHTML = '';
+            
+            // Add confetti pieces
+            for (let i = 0; i < 50; i++) {
+              const confetti = document.createElement('div');
+              confetti.className = 'confetti';
+              confetti.style.left = `${Math.random() * 100}%`;
+              confetti.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+              confetti.style.animationDelay = `${Math.random() * 5}s`;
+              container.appendChild(confetti);
+            }
+          }
+        }
+      }, [showConfetti]);
+
+      const handleDayChange = (e) => {
+        // Don't allow changes if inputs are locked
+        if (inputsLocked) return;
+        
+        const value = e.target.value;
+        // Allow empty string and numbers only
+        if (value === '') {
+          setDay('');
+        } else if (!isNaN(value)) {
+          setDay(value);
+        }
+      };
+
+      const handleMonthChange = (e) => {
+        // Don't allow changes if inputs are locked
+        if (inputsLocked) return;
+        
+        const value = e.target.value;
+        // Allow empty string and numbers only
+        if (value === '') {
+          setMonth('');
+        } else if (!isNaN(value)) {
+          setMonth(value);
+        }
+      };
+
+      const handleYearChange = (e) => {
+        // Don't allow changes if inputs are locked
+        if (inputsLocked) return;
+        
+        const value = e.target.value;
+        // Allow empty string and numbers only
+        if (value === '') {
+          setYear('');
+        } else if (!isNaN(value)) {
+          setYear(value);
+        }
+      };
+
+      const validateDate = (day, month, year) => {
+        // Basic validation
+        if (!day || !month || !year) return "Please enter all date fields";
+        
+        const dayNum = parseInt(day);
+        const monthNum = parseInt(month);
+        const yearNum = parseInt(year);
+        
+        if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) return "All fields must be numbers";
+        if (dayNum < 1 || dayNum > 31) return "Day must be between 1-31";
+        if (monthNum < 1 || monthNum > 12) return "Month must be between 1-12";
+        if (yearNum < 1900) return "Year must be 1900 or later";
+        if (yearNum > new Date().getFullYear()) return "Year cannot be in the future";
+
+        // Check for valid date (e.g., February 30th)
+        const formattedDay = String(dayNum).padStart(2, '0');
+        const formattedMonth = String(monthNum).padStart(2, '0');
+        const dateStr = `${yearNum}-${formattedMonth}-${formattedDay}`;
+        const date = new Date(dateStr);
+
+        if (isNaN(date.getTime())) return "Invalid date";
+        
+        // Check if the date's day matches the input day (catches invalid dates like Feb 31)
+        if (date.getDate() !== parseInt(dayNum)) return "Invalid date for this month";
+        
+        return null;
+      };
+
+      const calculateAge = () => {
+        // Hide instructions when calculating
+        setShowInstructions(false);
+        
+        // Reset states
+        setError(null);
+        setAge(null);
+        setIsBirthdayToday(false);
+        setIsNewborn(false);
+        setShowConfetti(false);
+        
+        // Validate inputs
+        const validationError = validateDate(day, month, year);
+        if (validationError) {
+          setError(validationError);
+          return;
+        }
+
+        // Lock inputs after successful validation
+        setInputsLocked(true);
+
+        // Format and create birth date
+        const dayNum = parseInt(day);
+        const monthNum = parseInt(month);
+        const yearNum = parseInt(year);
+        
+        const formattedDay = String(dayNum).padStart(2, '0');
+        const formattedMonth = String(monthNum).padStart(2, '0');
+        const birthDate = new Date(`${yearNum}-${formattedMonth}-${formattedDay}`);
+        
+        const today = new Date();
+        
+        // Calculate age
+        let years = today.getFullYear() - birthDate.getFullYear();
+        let months = today.getMonth() - birthDate.getMonth();
+        let days = today.getDate() - birthDate.getDate();
+
+        if (days < 0) {
+          const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+          months--;
+          days += lastDayOfMonth;
+        }
+        if (months < 0) {
+          years--;
+          months += 12;
+        }
+        
+        // Calculate total days lived
+        const birthTime = birthDate.getTime();
+        const todayTime = today.getTime();
+        const diffTime = Math.abs(todayTime - birthTime);
+        const totalDaysLived = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Calculate number of hours for newborns
+        const totalHoursLived = Math.floor(diffTime / (1000 * 60 * 60));
+        
+        // Calculate next birthday
+        let nextBirthdayDate = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+        if (nextBirthdayDate < today) {
+          nextBirthdayDate.setFullYear(today.getFullYear() + 1);
+        }
+        
+        const diffToNextBirthday = Math.abs(nextBirthdayDate - today);
+        const daysToNextBirthday = Math.ceil(diffToNextBirthday / (1000 * 60 * 60 * 24));
+        setDaysUntilBirthday(daysToNextBirthday);
+        
+        // Format next birthday date
+        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+        setNextBirthday(nextBirthdayDate.toLocaleDateString(undefined, options));
+        
+        // Check if today is birthday and birth year is current year (newborn)
+        const birthdayToday = today.getDate() === birthDate.getDate() && 
+                              today.getMonth() === birthDate.getMonth();
+        
+        const newborn = birthdayToday && today.getFullYear() === birthDate.getFullYear();
+        
+        setIsBirthdayToday(birthdayToday && !newborn);
+        setIsNewborn(newborn);
+        
+        if (birthdayToday || newborn) {
+          setShowConfetti(true);
+        }
+        
+        // Set age information
+        setAge({
+          years,
+          months,
+          days,
+          totalDaysLived,
+          totalHoursLived,
+          birthdayToday,
+          newborn
+        });
+
+        // Save to local storage for offline access
+        try {
+          localStorage.setItem('ageCalculator_lastResult', JSON.stringify({
+            years,
+            months,
+            days,
+            totalDaysLived,
+            totalHoursLived,
+            birthdayToday,
+            newborn,
+            daysUntilBirthday: daysToNextBirthday,
+            nextBirthday: nextBirthdayDate.toLocaleDateString(undefined, options),
+            inputs: { day, month, year }
+          }));
+        } catch (e) {
+          console.log('Error saving to localStorage:', e);
+        }
+      };
+
+      const resetForm = () => {
+        setDay('');
+        setMonth('');
+        setYear('');
+        setAge(null);
+        setDaysUntilBirthday(null);
+        setNextBirthday(null);
+        setError(null);
+        setIsBirthdayToday(false);
+        setIsNewborn(false);
+        setShowConfetti(false);
+        setShowInstructions(true);
+        setInputsLocked(false);
+      };
+
+      const formatNumber = (num) => {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      };
+
+      // Load last result from local storage on first render
+      useEffect(() => {
+        try {
+          const savedResult = localStorage.getItem('ageCalculator_lastResult');
+          if (savedResult) {
+            const parsed = JSON.parse(savedResult);
+            // Only restore if we have saved inputs and results
+            if (parsed.inputs && parsed.years !== undefined) {
+              setDay(parsed.inputs.day);
+              setMonth(parsed.inputs.month);
+              setYear(parsed.inputs.year);
+              setAge({
+                years: parsed.years,
+                months: parsed.months,
+                days: parsed.days,
+                totalDaysLived: parsed.totalDaysLived,
+                totalHoursLived: parsed.totalHoursLived,
+                birthdayToday: parsed.birthdayToday,
+                newborn: parsed.newborn
+              });
+              setDaysUntilBirthday(parsed.daysUntilBirthday);
+              setNextBirthday(parsed.nextBirthday);
+              setIsBirthdayToday(parsed.birthdayToday && !parsed.newborn);
+              setIsNewborn(parsed.newborn);
+              setInputsLocked(true);
+            }
+          }
+        } catch (e) {
+          console.log('Error loading from localStorage:', e);
+        }
+      }, []);
+
+      return (
+        <div className="bg-zinc-900 p-8 rounded-2xl shadow-xl w-full max-w-md relative overflow-hidden">
+          {showConfetti && <div id="confetti-container" className="absolute inset-0 pointer-events-none overflow-hidden"></div>}
+          
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-3xl font-bold text-white flex items-center">
+              <i className="fas fa-calendar-alt mr-2 text-cyan-400"></i>
+              Age Calculator
+            </h1>
+            <button 
+              onClick={() => setShowInstructions(!showInstructions)}
+              className="bg-zinc-800 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center"
+            >
+              <i className={`fas fa-${showInstructions ? 'times' : 'question'}`}></i>
+            </button>
+          </div>
+          
+          {showInstructions && (
+            <div className="mb-6 bg-zinc-800 p-4 rounded-lg text-white">
+              <h2 className="text-lg font-semibold mb-2 text-cyan-400">How to Use:</h2>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start">
+                  <i className="fas fa-circle text-xs mt-1 mr-2 text-cyan-500"></i>
+                  <span><strong>Day:</strong> Enter the day of birth (1-31)</span>
+                </li>
+                <li className="flex items-start">
+                  <i className="fas fa-circle text-xs mt-1 mr-2 text-cyan-500"></i>
+                  <span><strong>Month:</strong> Enter the month (1-12)<br/>
+                  <em className="text-zinc-400">Examples: January = 1, February = 2, etc.</em></span>
+                </li>
+                <li className="flex items-start">
+                  <i className="fas fa-circle text-xs mt-1 mr-2 text-cyan-500"></i>
+                  <span><strong>Year:</strong> Enter the year (1900-present)</span>
+                </li>
+                <li className="flex items-start mt-2">
+                  <i className="fas fa-info-circle text-cyan-500 mt-1 mr-2"></i>
+                  <span className="italic text-zinc-300">Click Calculate to see your age in years, months, and days!</span>
+                </li>
+                <li className="flex items-start mt-2">
+                  <i className="fas fa-exclamation-circle text-yellow-500 mt-1 mr-2"></i>
+                  <span className="italic text-yellow-200">Note: After calculation, you'll need to click Reset to enter new values.</span>
+                </li>
+                {isOffline && (
+                  <li className="flex items-start mt-2">
+                    <i className="fas fa-wifi-slash text-blue-400 mt-1 mr-2"></i>
+                    <span className="italic text-blue-300">App is in offline mode but fully functional!</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          
+          <div className="mb-6">
+            <div className="grid grid-cols-3 gap-4 mb-2">
+              <div className="text-center text-sm text-zinc-400 font-medium">Day</div>
+              <div className="text-center text-sm text-zinc-400 font-medium">Month</div>
+              <div className="text-center text-sm text-zinc-400 font-medium">Year</div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="relative tooltip">
+                <input 
+                  type="text" 
+                  inputMode="numeric"
+                  placeholder="DD" 
+                  value={day} 
+                  onChange={handleDayChange}
+                  maxLength="2"
+                  disabled={inputsLocked}
+                  className={`bg-zinc-800 text-white text-center rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputsLocked ? 'opacity-70' : ''}`} 
+                />
+                <span className="tooltiptext">{inputsLocked ? 'Click Reset to enter new values' : 'Enter day (1-31)'}</span>
+              </div>
+              <div className="relative tooltip">
+                <input 
+                  type="text" 
+                  inputMode="numeric"
+                  placeholder="MM" 
+                  value={month} 
+                  onChange={handleMonthChange}
+                  maxLength="2"
+                  disabled={inputsLocked}
+                  className={`bg-zinc-800 text-white text-center rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputsLocked ? 'opacity-70' : ''}`} 
+                />
+                <span className="tooltiptext">{inputsLocked ? 'Click Reset to enter new values' : 'Enter month (1-12)'}</span>
+              </div>
+              <div className="relative tooltip">
+                <input 
+                  type="text" 
+                  inputMode="numeric"
+                  placeholder="YYYY" 
+                  value={year} 
+                  onChange={handleYearChange}
+                  maxLength="4"
+                  disabled={inputsLocked}
+                  className={`bg-zinc-800 text-white text-center rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputsLocked ? 'opacity-70' : ''}`} 
+                />
+                <span className="tooltiptext">{inputsLocked ? 'Click Reset to enter new values' : 'Enter year (1900-present)'}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <button 
+              onClick={calculateAge}
+              disabled={inputsLocked || !day || !month || !year} 
+              className={`bg-gradient-to-r from-cyan-500 to-cyan-600 text-black font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-all ${inputsLocked || !day || !month || !year ? 'opacity-50 cursor-not-allowed' : 'hover:from-cyan-600 hover:to-cyan-700'}`}
+            >
+              <i className="fas fa-calculator mr-2"></i> Calculate
+            </button>
+            <button 
+              onClick={resetForm} 
+              className="bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center"
+            >
+              <i className="fas fa-redo-alt mr-2"></i> Reset
+            </button>
+          </div>
+          
+          {inputsLocked && !age && !error && (
+            <div className="flex justify-center items-center my-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-cyan-500"></div>
+              <span className="ml-2 text-cyan-500">Calculating...</span>
+            </div>
+          )}
+          
+          {error && (
+            <div className="mt-4 bg-red-900/50 border border-red-700 text-white p-3 rounded-md flex items-start">
+              <i className="fas fa-exclamation-circle text-red-500 mr-2 mt-1"></i>
+              <span>{error}</span>
+            </div>
+          )}
+          
+          {age && isNewborn && (
+            <div className="mt-6 baby-animation">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-5 rounded-lg text-center">
+                <div className="text-2xl font-bold text-white mb-2">
+                  👶 Welcome to the World! 👶
+                </div>
+                <div className="text-white text-lg">
+                  <span className="text-yellow-300 font-bold">Happy Birth Day!</span>
+                </div>
+                <div className="mt-3 text-white">
+                  {age.totalDaysLived === 0 ? (
+                    <div>
+                      <div className="text-lg">Born today!</div>
+                      <div className="mt-2 bg-purple-800/50 p-3 rounded-md">
+                        <div className="text-sm text-zinc-100">This little one has been with us for:</div>
+                        <div className="font-bold text-xl text-white">
+                          {age.totalHoursLived < 24 ? (
+                            <span>{Math.floor(age.totalHoursLived)} hours</span>
+                          ) : (
+                            <span>1 day</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-2 bg-purple-800/50 p-3 rounded-md">
+                      <div className="text-sm text-zinc-100">This little one has been with us for:</div>
+                      <div className="font-bold text-xl text-white">{age.totalDaysLived} days</div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 text-yellow-200">
+                  <i className="fas fa-heart mr-1"></i> Congratulations on your new bundle of joy!
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {age && isBirthdayToday && (
+            <div className="mt-6 birthday-animation">
+              <div className="bg-gradient-to-r from-cyan-600 to-blue-700 p-5 rounded-lg text-center">
+                <div className="text-2xl font-bold text-white mb-2">
+                  🎉🎂 Happy Birthday! 🎂🎉
+                </div>
+                <div className="text-white text-lg">
+                  Today you turn <span className="text-yellow-300 font-bold">{age.years} years</span> old!
+                </div>
+                <div className="mt-2 text-white">
+                  That's {age.years} years, {age.months} months, and {age.days} days
+                </div>
+                <div className="mt-4 bg-blue-900/50 p-3 rounded-md text-cyan-100">
+                  <div className="font-medium">You've been alive for:</div>
+                  <div className="font-bold text-xl text-white">{formatNumber(age.totalDaysLived)} days</div>
+                </div>
+                <div className="mt-4 text-yellow-200">
+                  <i className="fas fa-magic mr-1"></i> Wishing you an amazing day filled with joy and happiness!
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {age && !isBirthdayToday && !isNewborn && (
+            <div className="mt-6">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-zinc-800 p-4 rounded-md text-center">
+                  <div className="text-3xl font-bold text-white">{age.years}</div>
+                  <div className="text-sm text-zinc-400 mt-1">years</div>
+                </div>
+                <div className="bg-zinc-800 p-4 rounded-md text-center">
+                  <div className="text-3xl font-bold text-white">{age.months}</div>
+                  <div className="text-sm text-zinc-400 mt-1">months</div>
+                </div>
+                <div className="bg-zinc-800 p-4 rounded-md text-center">
+                  <div className="text-3xl font-bold text-white">{age.days}</div>
+                  <div className="text-sm text-zinc-400 mt-1">days</div>
+                </div>
+              </div>
+              
+              <div className="mt-4 grid grid-cols-1 gap-3">
+                <div className="bg-zinc-800 p-4 rounded-md">
+                  <div className="text-sm text-zinc-400 mb-1 flex items-center">
+                    <i className="fas fa-calendar-day mr-2 text-cyan-500"></i>
+                    <span>Total days you've lived:</span>
+                  </div>
+                  <div className="text-xl font-semibold text-white">{formatNumber(age.totalDaysLived)} days</div>
+                </div>
+                
+                <div className="bg-zinc-800 p-4 rounded-md">
+                  <div className="text-sm text-zinc-400 mb-1 flex items-center">
+                    <i className="fas fa-birthday-cake mr-2 text-cyan-500"></i>
+                    <span>Your next birthday:</span>
+                  </div>
+                  <div className="text-white">{nextBirthday}</div>
+                  <div className="text-sm mt-1">
+                    <span className="bg-cyan-900 text-cyan-200 px-2 py-1 rounded-full text-xs font-medium">
+                      <i className="fas fa-hourglass-half mr-1"></i> {daysUntilBirthday} days to go
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {inputsLocked && (
+            <div className="mt-4 bg-yellow-900/30 border border-yellow-700/50 text-white p-3 rounded-md flex items-start">
+              <i className="fas fa-info-circle text-yellow-500 mr-2 mt-1"></i>
+              <span>Inputs are locked. Click <strong>Reset</strong> to calculate a different date.</span>
+            </div>
+          )}
+          
+          <div className="mt-8 pt-4 border-t border-zinc-800 text-center text-zinc-500 text-xs">
+            <div className="flex items-center justify-center">
+              Made with <i className="fas fa-heart text-red-500 mx-1 heart-animation"></i> by 
+              <a
+              // The final part of the HTML file (this completes the previous HTML)
+              href="https://github.com/DevDivyanshJindal" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-cyan-500 hover:text-cyan-400 ml-1 transition-colors flex items-center"
+              >
+                Divyansh Jindal
+                <i className="fab fa-github ml-1"></i>
+              </a>
+            </div>
+            {isOffline && (
+              <div className="mt-2 text-blue-400 text-center">
+                <i className="fas fa-check-circle mr-1"></i> Works offline
+              </div>
+            )}
+          </div>
+        </div>
+      );
     }
+
+    // Render the React component
+    ReactDOM.render(<AgeCalculator />, document.getElementById('root'));
   </script>
 </body>
 </html>

@@ -6,6 +6,7 @@
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#00ffff",
+  "description": "Calculate your exact age in years, months, and days",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -15,7 +16,8 @@
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
