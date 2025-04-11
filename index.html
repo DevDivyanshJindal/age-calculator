@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0f0f11">
+  <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Age Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -18,14 +19,15 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background-color: #0f0f11; /* Matching zinc-950 */
+      background-color: #000000;
     }
     /* Apply matching dark background to the entire page */
     html, body {
-      background-color: #0f0f11; /* Matching zinc-950 */
+      background-color: #000000;
       margin: 0;
       padding: 0;
       min-height: 100vh;
+      overflow-x: hidden;
     }
     .birthday-animation {
       animation: pulse 2s infinite;
@@ -93,7 +95,7 @@
       position: fixed;
       bottom: 10px;
       right: 10px;
-      background-color: #374151;
+      background-color: #000000;
       color: white;
       padding: 8px 12px;
       border-radius: 6px;
@@ -427,7 +429,7 @@
       }, []);
 
       return (
-        <div className="bg-zinc-950 p-8 w-full max-w-md relative overflow-hidden">
+        <div className="bg-black p-8 w-full max-w-md relative overflow-hidden">
           {showConfetti && <div id="confetti-container" className="absolute inset-0 pointer-events-none overflow-hidden"></div>}
           
           <div className="flex justify-between items-center mb-4">
