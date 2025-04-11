@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#00ffff">
+  <meta name="theme-color" content="#121212">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>Age Calculator</title>
@@ -18,11 +18,11 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background-color: #00ffff; /* Match the top bar cyan color */
+      background-color: #121212; /* Dark/near black background */
     }
-    /* Apply cyan background to the entire page */
+    /* Apply dark background to the entire page */
     html, body {
-      background-color: #00ffff;
+      background-color: #121212; /* Dark/near black background */
       margin: 0;
       padding: 0;
       min-height: 100vh;
@@ -110,7 +110,7 @@
 </head>
 <body>
   <div class="min-h-screen flex items-center justify-center p-4">
-    <div id="root"></div>
+    <div id="root" class="bg-zinc-950 rounded-xl overflow-hidden shadow-2xl"></div>
     <div id="offline-badge" class="offline-badge">
       <i class="fas fa-wifi-slash"></i> Offline Mode
     </div>
@@ -427,7 +427,7 @@
       }, []);
 
       return (
-        <div className="bg-zinc-900 p-8 rounded-2xl shadow-xl w-full max-w-md relative overflow-hidden">
+        <div className="bg-zinc-950 p-8 w-full max-w-md relative overflow-hidden">
           {showConfetti && <div id="confetti-container" className="absolute inset-0 pointer-events-none overflow-hidden"></div>}
           
           <div className="flex justify-between items-center mb-4">
