@@ -18,6 +18,14 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
+      background-color: #00ffff; /* Match the top bar cyan color */
+    }
+    /* Apply cyan background to the entire page */
+    html, body {
+      background-color: #00ffff;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
     }
     .birthday-animation {
       animation: pulse 2s infinite;
@@ -100,10 +108,12 @@
     }
   </style>
 </head>
-<body class="bg-zinc-950 min-h-screen flex items-center justify-center p-4">
-  <div id="root"></div>
-  <div id="offline-badge" class="offline-badge">
-    <i class="fas fa-wifi-slash"></i> Offline Mode
+<body>
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div id="root"></div>
+    <div id="offline-badge" class="offline-badge">
+      <i class="fas fa-wifi-slash"></i> Offline Mode
+    </div>
   </div>
 
   <script type="text/babel">
@@ -661,8 +671,7 @@
             <div className="flex items-center justify-center">
               Made with <i className="fas fa-heart text-red-500 mx-1 heart-animation"></i> by 
               <a
-              // The final part of the HTML file (this completes the previous HTML)
-              href="https://github.com/DevDivyanshJindal" 
+                href="https://github.com/DevDivyanshJindal" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="text-cyan-500 hover:text-cyan-400 ml-1 transition-colors flex items-center"
